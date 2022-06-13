@@ -22,8 +22,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 public class PeopleRepositoryTests {
     private PeopleRepository repo;
     private Connection connection;
-
-
     @BeforeEach
     void setUp() {
         try {

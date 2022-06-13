@@ -5,7 +5,7 @@ import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.util.Objects;
 
-public class Person {
+public class Person implements Entity{
     /**
      *  ---------- why using type Long for id ? ---------------
      *  By setting "id" to Long (instead of long), we can allow 'id'
@@ -18,6 +18,7 @@ public class Person {
     private String lastName;
     private ZonedDateTime dob;
     private BigDecimal salary = new BigDecimal("0");
+
 
     public Person(long id, String firstName, String lastName, ZonedDateTime dob, BigDecimal salary) {
         this(id, firstName, lastName, dob);
@@ -37,10 +38,12 @@ public class Person {
         this.dob = dob;
     }
 
+    @Override
     public Long getId() {
         return this.id;
     }
 
+    @Override
     public void setId(Long id) {
         this.id = id;
     }

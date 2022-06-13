@@ -13,41 +13,52 @@ import java.util.Optional;
 
 import static java.util.stream.Collectors.joining;
 
-public class PeopleRepository {
+public class PeopleRepository extends CRUDRepository<Person> {
     public static final String FIND_BY_ID_SQL = "SELECT ID, FIRST_NAME, LAST_NAME, DOB, SALARY FROM PEOPLE WHERE ID = ?";
     public static final String SAVE_PERSON_SQL = "INSERT INTO PEOPLE (FIRST_NAME, LAST_NAME, DOB) VALUES (?, ?, ?)";
     public static final String FIND_ALL_SQL = "SELECT ID, FIRST_NAME, LAST_NAME, DOB, SALARY FROM PEOPLE";
     private Connection connection;
 
     public PeopleRepository(Connection connection) {
-        this.connection = connection;
+        super(connection);
     }
 
-    // Ctrl + Alt + C -> extract string into const of  member class
-    public Person save(Person person) {
-        String sql = String.format(SAVE_PERSON_SQL);
-        try {
-            PreparedStatement ps = this.connection.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS);
-            ps.setString(1, person.getFirstName());
-            ps.setString(2, person.getLastName());
-            ps.setTimestamp(3, convertDobToTimestamp(person.getDob()));
-            int recordAffected = ps.executeUpdate();
-            ResultSet rs = ps.getGeneratedKeys();
-            while (rs.next()) {
-                long id = rs.getLong(1);
-                person.setId(id);
-            }
-            System.out.printf("Records affected: %d\n", recordAffected);
-        } catch (SQLException e) {
-            System.out.println(e.getMessage());
-        }
-        return person;
+    @Override
+    String getSaveSql() {
+        return PeopleRepository.SAVE_PERSON_SQL;
     }
+
+    @Override
+    void mapForSave( Person entity, PreparedStatement ps) throws SQLException {
+        ps.setString(1, entity.getFirstName());
+        ps.setString(2, entity.getLastName());
+        ps.setTimestamp(3, this.convertDobToTimestamp(entity.getDob()));
+    }
+
+//    // Ctrl + Alt + C -> extract string into const of  member class
+//    public Person save(Person person) {
+//        String sql = String.format(SAVE_PERSON_SQL);
+//        try {
+//            PreparedStatement ps = this.connection.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS);
+////            mapForSave(ps, person, convertDobToTimestamp(person.getDob()));
+//            int recordAffected = ps.executeUpdate();
+//            ResultSet rs = ps.getGeneratedKeys();
+//            while (rs.next()) {
+//                long id = rs.getLong(1);
+//                person.setId(id);
+//            }
+//            System.out.printf("Records affected: %d\n", recordAffected);
+//        } catch (SQLException e) {
+//            System.out.println(e.getMessage());
+//        }
+//        return person;
+//    }
+
 
     public Optional<Person> findById(Long id) {
         Person person = null;
         try {
-            PreparedStatement ps = this.connection.prepareStatement(FIND_BY_ID_SQL);
+            PreparedStatement ps = super.connection.prepareStatement(FIND_BY_ID_SQL);
             ps.setLong(1, id);
             ResultSet rs = ps.executeQuery();// for query
             while (rs.next()) {
@@ -72,7 +83,7 @@ public class PeopleRepository {
     public long count() {
         long result = 0L;
         try {
-            PreparedStatement ps = this.connection.prepareStatement("SELECT COUNT(*) FROM PEOPLE");
+            PreparedStatement ps = super.connection.prepareStatement("SELECT COUNT(*) FROM PEOPLE");
             ResultSet rs = ps.executeQuery();
             while(rs.next())
                 result = rs.getLong(1);
@@ -85,7 +96,7 @@ public class PeopleRepository {
     public List<Person> findAll() {
         List<Person> result = new ArrayList<Person>();
         try {
-            PreparedStatement ps = this.connection.prepareStatement(FIND_ALL_SQL);
+            PreparedStatement ps = super.connection.prepareStatement(FIND_ALL_SQL);
             ResultSet rs = ps.executeQuery();
             while(rs.next()) {
                 Long id = rs.getLong("ID");
@@ -104,7 +115,7 @@ public class PeopleRepository {
 
     public void delete(Person person) {
         try {
-            PreparedStatement ps = this.connection.prepareStatement("DELETE FROM PEOPLE WHERE ID = ?");
+            PreparedStatement ps = super.connection.prepareStatement("DELETE FROM PEOPLE WHERE ID = ?");
             ps.setLong(1, person.getId());
             int affectedRecordCount = ps.executeUpdate();
             System.out.println(affectedRecordCount);
@@ -130,7 +141,7 @@ public class PeopleRepository {
                 .map(String::valueOf)
                 .collect(joining(","));
         try {
-            Statement stmt = this.connection.createStatement();
+            Statement stmt = super.connection.createStatement();
             int affectedRecordCount = stmt.executeUpdate("DELETE FROM PEOPLE WHERE ID IN(:ids)".replace(":ids", ids));
             System.out.println(affectedRecordCount);
         } catch (SQLException e) {
@@ -140,7 +151,7 @@ public class PeopleRepository {
 
     public void update(Person person) {
         try {
-            PreparedStatement ps = this.connection.prepareStatement("UPDATE PEOPLE SET FIRST_NAME=?, LAST_NAME=?, DOB=?, SALARY=? WHERE ID=?");
+            PreparedStatement ps = super.connection.prepareStatement("UPDATE PEOPLE SET FIRST_NAME=?, LAST_NAME=?, DOB=?, SALARY=? WHERE ID=?");
             ps.setString(1, person.getFirstName());
             ps.setString(2, person.getLastName());
             ps.setTimestamp(3, this.convertDobToTimestamp(person.getDob()));
