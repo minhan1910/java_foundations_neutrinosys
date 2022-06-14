@@ -35,7 +35,22 @@ public class PeopleRepository extends CRUDRepository<Person> {
         ps.setTimestamp(3, this.convertDobToTimestamp(entity.getDob()));
     }
 
-//    // Ctrl + Alt + C -> extract string into const of  member class
+    @Override
+    Person extractEntityFromResultSet(ResultSet rs) throws SQLException {
+        long personId = rs.getLong("ID");
+        String firstName = rs.getString("FIRST_NAME");
+        String lastName = rs.getString("LAST_NAME");
+        ZonedDateTime dob = ZonedDateTime.of(rs.getTimestamp("DOB").toLocalDateTime(), ZoneId.of("+0"));// +0 -> work every time zone
+        BigDecimal salary = rs.getBigDecimal("SALARY");
+        return new Person(personId, firstName, lastName, dob, salary);
+    }
+
+    @Override
+    protected String getFindByIdSql() {
+        return FIND_BY_ID_SQL;
+    }
+
+    //    // Ctrl + Alt + C -> extract string into const of  member class
 //    public Person save(Person person) {
 //        String sql = String.format(SAVE_PERSON_SQL);
 //        try {
@@ -54,7 +69,6 @@ public class PeopleRepository extends CRUDRepository<Person> {
 //        return person;
 //    }
 
-
     public Optional<Person> findById(Long id) {
         Person person = null;
         try {
@@ -62,22 +76,12 @@ public class PeopleRepository extends CRUDRepository<Person> {
             ps.setLong(1, id);
             ResultSet rs = ps.executeQuery();// for query
             while (rs.next()) {
-                person = extractPersonFromResultSet(rs);
+                person = extractEntityFromResultSet(rs);
             }
         } catch (SQLException e) {
             System.out.println(e.getMessage());
         }
-
         return Optional.ofNullable(person);
-    }
-
-    private Person extractPersonFromResultSet(ResultSet rs) throws SQLException {
-        long personId = rs.getLong("ID");
-        String firstName = rs.getString("FIRST_NAME");
-        String lastName = rs.getString("LAST_NAME");
-        ZonedDateTime dob = ZonedDateTime.of(rs.getTimestamp("DOB").toLocalDateTime(), ZoneId.of("+0"));// +0 -> work every time zone
-        BigDecimal salary = rs.getBigDecimal("SALARY");
-        return new Person(personId, firstName, lastName, dob, salary);
     }
 
     public long count() {
