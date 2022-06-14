@@ -1,7 +1,6 @@
 package com.neutrinosys.peopledb.repository;
 
 import com.neutrinosys.peopledb.model.Person;
-import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -14,9 +13,7 @@ import java.time.ZonedDateTime;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
-import java.util.stream.Collectors;
 
-import static java.util.stream.Collectors.joining;
 import static org.assertj.core.api.Assertions.assertThat;
 
 public class PeopleRepositoryTests {
@@ -68,16 +65,6 @@ public class PeopleRepositoryTests {
 
     @Test
     public void canGetAllPeople() {
-//        this.repo.save(new Person("test", "jackson", ZonedDateTime.now()));
-//        this.repo.save(new Person("test", "jackson", ZonedDateTime.now()));
-//        this.repo.save(new Person("test", "jackson", ZonedDateTime.now()));
-//        this.repo.save(new Person("test", "jackson", ZonedDateTime.now()));
-//        this.repo.save(new Person("test", "jackson", ZonedDateTime.now()));
-//        this.repo.save(new Person("test", "jackson", ZonedDateTime.now()));
-//        this.repo.save(new Person("test", "jackson", ZonedDateTime.now()));
-//        this.repo.save(new Person("test", "jackson", ZonedDateTime.now()));
-//        this.repo.save(new Person("test", "jackson", ZonedDateTime.now()));
-//        this.repo.save(new Person("test", "jackson", ZonedDateTime.now()));
         List<Person> people = this.repo.findAll();
         assertThat(people).hasSizeGreaterThan(10);
     }

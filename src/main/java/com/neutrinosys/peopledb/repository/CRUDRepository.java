@@ -1,9 +1,9 @@
 package com.neutrinosys.peopledb.repository;
 
+import com.neutrinosys.peopledb.annotation.Id;
 import com.neutrinosys.peopledb.annotation.MultiSQL;
 import com.neutrinosys.peopledb.annotation.SQL;
 import com.neutrinosys.peopledb.model.CrudOperation;
-import com.neutrinosys.peopledb.model.Entity;
 
 import java.sql.*;
 import java.util.ArrayList;
@@ -15,7 +15,7 @@ import java.util.stream.Stream;
 
 import static java.util.stream.Collectors.joining;
 
-public abstract class CRUDRepository<T extends Entity> {
+public abstract class CRUDRepository<T> {
     protected Connection connection;
 
     public CRUDRepository(Connection connection) {
@@ -49,7 +49,7 @@ public abstract class CRUDRepository<T extends Entity> {
             ResultSet rs = ps.getGeneratedKeys();
             while (rs.next()) {
                 long id = rs.getLong(1);
-                entity.setId(id);
+                setIdByAnnotation(id, entity);
                 System.out.println(entity);
             }
             System.out.printf("Records affected: %d\n", recordAffected);
@@ -104,7 +104,7 @@ public abstract class CRUDRepository<T extends Entity> {
     public void delete(T entity) {
         try {
             PreparedStatement ps = this.connection.prepareStatement(getSqlByAnnotation(CrudOperation.DELETE_ONE, this::getDeleteSql));
-            ps.setLong(1, entity.getId());
+            ps.setLong(1, getIdByAnnotation(entity));
             int affectedRecordCount = ps.executeUpdate();
             System.out.println(affectedRecordCount);
         } catch (SQLException e) {
@@ -112,9 +112,50 @@ public abstract class CRUDRepository<T extends Entity> {
         }
     }
 
+    private void setIdByAnnotation(Long id, T entity) {
+        Arrays.stream(entity.getClass().getDeclaredFields())
+                .filter(f -> f.isAnnotationPresent(Id.class))
+                .forEach(f -> {
+                    // f -> field of class
+                    f.setAccessible(true);
+                    try {
+                        f.set(entity, id);
+                    } catch (IllegalAccessException e) {
+                        throw new RuntimeException("Unable to set id field value.");
+                    }
+                });
+    }
+
+    /**
+     * Note:
+     * Remember, Class is like the blueprint value while Object is like
+     * the building. We can't store things in a blueprint but we
+     * can store things in a building. (Though static variables do
+     * break this analog. :-))
+     * @param entity
+     * @return Long id
+     */
+    private Long getIdByAnnotation(T entity) {
+        return Arrays.stream(entity.getClass().getDeclaredFields())
+                .filter(f -> f.isAnnotationPresent(Id.class))
+                .map(f -> {
+                    // f -> field of class
+                    f.setAccessible(true); // for accessing private or ... filed
+                    Long id = null;
+                    try {
+                        id = (long)f.get(entity);
+                    } catch (IllegalAccessException e) {
+                        e.getStackTrace();
+                    }
+                    return id;
+                })
+                .findFirst().orElseThrow(() -> new RuntimeException("No ID annotated field found"));
+    }
+
     public void delete(T... entities) {
         String ids = Arrays.stream(entities)
-                .map(T::getId)
+                // or e -> findIdByAnnotation(e)
+                .map(this::getIdByAnnotation)
                 .map(String::valueOf)
                 .collect(joining(","));
         try {
@@ -130,7 +171,7 @@ public abstract class CRUDRepository<T extends Entity> {
         try {
             PreparedStatement ps = this.connection.prepareStatement(getSqlByAnnotation(CrudOperation.UPDATE, this::getUpdateSql));
             mapForUpdate(entity, ps);
-            ps.setLong(5, entity.getId());
+            ps.setLong(5, getIdByAnnotation(entity));
             ps.executeUpdate();
         } catch (SQLException e) {
             System.out.println(e.getMessage());
