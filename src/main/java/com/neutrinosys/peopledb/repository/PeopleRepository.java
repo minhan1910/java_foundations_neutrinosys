@@ -1,5 +1,6 @@
 package com.neutrinosys.peopledb.repository;
 
+import com.neutrinosys.peopledb.annotation.SQL;
 import com.neutrinosys.peopledb.model.Person;
 
 import java.math.BigDecimal;
@@ -16,17 +17,26 @@ public class PeopleRepository extends CRUDRepository<Person> {
     private static final String DELETE_SQL = "DELETE FROM PEOPLE WHERE ID = ?";
     public static final String DELETE_IN_SQL = "DELETE FROM PEOPLE WHERE ID IN(:ids)";
     public static final String UPDATE_SQL = "UPDATE PEOPLE SET FIRST_NAME=?, LAST_NAME=?, DOB=?, SALARY=? WHERE ID=?";
-    private Connection connection;
 
     public PeopleRepository(Connection connection) {
         super(connection);
     }
 
     @Override
+    @SQL(value=SAVE_PERSON_SQL)
     void mapForSave( Person entity, PreparedStatement ps) throws SQLException {
         ps.setString(1, entity.getFirstName());
         ps.setString(2, entity.getLastName());
         ps.setTimestamp(3, this.convertDobToTimestamp(entity.getDob()));
+    }
+
+    @Override
+    @SQL(value=UPDATE_SQL)
+    void mapForUpdate(Person entity, PreparedStatement ps) throws SQLException {
+        ps.setString(1, entity.getFirstName());
+        ps.setString(2, entity.getLastName());
+        ps.setTimestamp(3, this.convertDobToTimestamp(entity.getDob()));
+        ps.setBigDecimal(4, entity.getSalary());
     }
 
     @Override
@@ -37,20 +47,6 @@ public class PeopleRepository extends CRUDRepository<Person> {
         ZonedDateTime dob = ZonedDateTime.of(rs.getTimestamp("DOB").toLocalDateTime(), ZoneId.of("+0"));// +0 -> work every time zone
         BigDecimal salary = rs.getBigDecimal("SALARY");
         return new Person(personId, firstName, lastName, dob, salary);
-    }
-
-    @Override
-    void mapForUpdate(Person entity, PreparedStatement ps) throws SQLException {
-        ps.setString(1, entity.getFirstName());
-        ps.setString(2, entity.getLastName());
-        ps.setTimestamp(3, this.convertDobToTimestamp(entity.getDob()));
-        ps.setBigDecimal(4, entity.getSalary());
-    }
-
-
-    @Override
-    String getSaveSql() {
-        return PeopleRepository.SAVE_PERSON_SQL;
     }
 
     @Override
@@ -76,10 +72,6 @@ public class PeopleRepository extends CRUDRepository<Person> {
     @Override
     protected String getDeleteInSql() {
         return DELETE_IN_SQL;
-    }
-    @Override
-    protected String getUpdateSql() {
-        return UPDATE_SQL;
     }
 
     // Ctrl + Alt + P no se doi tu person.dob -> ZonedDateTime dob

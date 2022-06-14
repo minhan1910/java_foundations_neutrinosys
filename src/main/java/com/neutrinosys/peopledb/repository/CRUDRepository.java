@@ -1,5 +1,6 @@
 package com.neutrinosys.peopledb.repository;
 
+import com.neutrinosys.peopledb.annotation.SQL;
 import com.neutrinosys.peopledb.model.Entity;
 
 import java.sql.*;
@@ -7,6 +8,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
+import java.util.function.Supplier;
 
 import static java.util.stream.Collectors.joining;
 
@@ -17,15 +19,24 @@ public abstract class CRUDRepository<T extends Entity> {
         this.connection = connection;
     }
 
+    // Reflection techniques / Ctrl + Alt + P is extract parameter for method
+    private String getSqlByAnnotation(String methodName, Supplier<String> sqlGetter) {
+         return Arrays.stream(this.getClass().getDeclaredMethods())
+                // contentEquals or equals its ok, just a little more safe as personal choice. Don't overthink it
+                .filter(m -> methodName.contentEquals(m.getName()))
+                .map(m -> m.getAnnotation(SQL.class)) // find the method have a type of SQL annotation
+                .map(SQL::value)
+                .findFirst().orElseGet(sqlGetter); // co the dung orElseGet de reference this method -> this::getSaveSql
+    }
+
     public T save(T entity) {
         try {
-            PreparedStatement ps = this.connection.prepareStatement(getSaveSql(), Statement.RETURN_GENERATED_KEYS);
+            PreparedStatement ps = this.connection.prepareStatement(getSqlByAnnotation("mapForSave", this::getSaveSql), Statement.RETURN_GENERATED_KEYS);
             mapForSave(entity, ps);
             int recordAffected = ps.executeUpdate();
             ResultSet rs = ps.getGeneratedKeys();
             while (rs.next()) {
                 long id = rs.getLong(1);
-                // setId het loi vi nho extends Entity, co setId trong do
                 entity.setId(id);
                 System.out.println(entity);
             }
@@ -105,7 +116,7 @@ public abstract class CRUDRepository<T extends Entity> {
 
     public void update(T entity) {
         try {
-            PreparedStatement ps = this.connection.prepareStatement(getUpdateSql());
+            PreparedStatement ps = this.connection.prepareStatement(getSqlByAnnotation("mapForUpdate", this::getUpdateSql));
             mapForUpdate(entity, ps);
             ps.setLong(5, entity.getId());
             ps.executeUpdate();
@@ -114,7 +125,7 @@ public abstract class CRUDRepository<T extends Entity> {
         }
     }
 
-    protected abstract String getUpdateSql();
+    protected String getUpdateSql() { return ""; }
 
     /**
      *
@@ -136,6 +147,6 @@ public abstract class CRUDRepository<T extends Entity> {
     protected abstract String getFindByIdSql();
     abstract void mapForSave(T entity, PreparedStatement ps) throws SQLException;
     abstract void mapForUpdate(T entity, PreparedStatement ps) throws SQLException;
-    abstract String getSaveSql();
+    String getSaveSql() { return ""; }
 }
 
